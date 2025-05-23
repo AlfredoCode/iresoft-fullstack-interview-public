@@ -1,4 +1,4 @@
-import React, { useState, MouseEvent, ChangeEvent } from "react";
+import React, { useState, MouseEvent, ChangeEvent, useEffect } from "react";
 import {
   Box,
   Stack,
@@ -11,6 +11,15 @@ import {
   MenuItem,
   Checkbox,
   TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Select,
+  MenuItem as SelectItem,
+  FormControl,
+  InputLabel,
 } from "@mui/material";
 import PersonIcon from "@mui/icons-material/Person";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
@@ -21,7 +30,12 @@ import { Team } from "../../types/types";
 type Props = {
   team: Team & { children: Team[] };
   onSelect: (team: Team & { children: Team[] }) => void;
-  onModify: (teamId: string, newName: string) => void;
+  onModify: (
+    teamId: string,
+    newName: string,
+    newParentId: string | null
+  ) => void;
+  teams: Team[]; // Add the full teams list here for the parent select
   selectedTeamIds?: Set<string>;
   toggleTeamSelection?: (teamIds: string[]) => void;
   level?: number;
@@ -31,6 +45,7 @@ export default function TeamNode({
   team,
   onSelect,
   onModify,
+  teams,
   selectedTeamIds = new Set(),
   toggleTeamSelection,
   level = 0,
@@ -39,6 +54,10 @@ export default function TeamNode({
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(team.name);
+  const [editParentId, setEditParentId] = useState<string | null>(
+    team.parent_team_id != null ? String(team.parent_team_id) : null
+  );
+
   const hasChildren = team.children.length > 0;
 
   // Helper: get all IDs in this team subtree (including self)
@@ -72,32 +91,39 @@ export default function TeamNode({
     setAnchorEl(null);
   };
 
-  // Open edit mode when clicking "Upravit tým"
+  // Open edit modal
   const handleEditClick = (event: MouseEvent<HTMLElement>) => {
     event.stopPropagation();
+    setEditName(team.name);
+    setEditParentId(
+      team.parent_team_id != null ? String(team.parent_team_id) : null
+    );
+
     setEditing(true);
     setAnchorEl(null);
   };
 
-  const handleEditChange = (event: ChangeEvent<HTMLInputElement>) => {
-    setEditName(event.target.value);
-  };
+  // Prevent selecting the team itself or its descendants as parent to avoid cycles
+  const forbiddenParentIds = new Set(getAllTeamIds(team));
+  forbiddenParentIds.add(team.id);
 
-  // Commit change on blur or Enter key
-  const commitEdit = () => {
-    if (editName.trim() && editName !== team.name) {
-      onModify(team.id, editName.trim());
+  // Filter teams for select options (exclude current and descendants)
+  const possibleParents = teams
+    ? teams.filter((t) => !forbiddenParentIds.has(t.id))
+    : [];
+
+  const handleSave = () => {
+    if (
+      editName.trim() &&
+      (editName !== team.name || editParentId !== team.parent_team_id)
+    ) {
+      onModify(team.id, editName.trim(), editParentId);
     }
     setEditing(false);
   };
 
-  const handleEditKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Enter") {
-      commitEdit();
-    } else if (event.key === "Escape") {
-      setEditName(team.name);
-      setEditing(false);
-    }
+  const handleCancel = () => {
+    setEditing(false);
   };
 
   return (
@@ -156,31 +182,18 @@ export default function TeamNode({
           </Avatar>
         </Badge>
 
-        {editing ? (
-          <TextField
-            value={editName}
-            onChange={handleEditChange}
-            onBlur={commitEdit}
-            onKeyDown={handleEditKeyDown}
-            size="small"
-            autoFocus
-            sx={{ flexGrow: 1 }}
-            inputProps={{ maxLength: 50 }}
-          />
-        ) : (
-          <Typography
-            noWrap
-            onClick={() => onSelect(team)}
-            sx={{
-              userSelect: "none",
-              flexGrow: 1,
-              fontWeight: "normal",
-              "&:hover": { textDecoration: "underline" },
-            }}
-          >
-            {team.name}
-          </Typography>
-        )}
+        <Typography
+          noWrap
+          onClick={() => onSelect(team)}
+          sx={{
+            userSelect: "none",
+            flexGrow: 1,
+            fontWeight: "normal",
+            "&:hover": { textDecoration: "underline" },
+          }}
+        >
+          {team.name}
+        </Typography>
 
         {/* 3 dots menu button */}
         <IconButton
@@ -223,6 +236,7 @@ export default function TeamNode({
               team={child}
               onSelect={onSelect}
               onModify={onModify}
+              teams={teams} // Pass down the teams here too
               selectedTeamIds={selectedTeamIds}
               toggleTeamSelection={toggleTeamSelection}
               level={level + 1}
@@ -230,6 +244,49 @@ export default function TeamNode({
           ))}
         </Collapse>
       )}
+
+      {/* Edit modal */}
+      <Dialog open={editing} onClose={handleCancel} maxWidth="sm" fullWidth>
+        <DialogTitle>Upravit tým</DialogTitle>
+        <DialogContent>
+          <TextField
+            label="Název týmu"
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            fullWidth
+            margin="normal"
+            inputProps={{ maxLength: 50 }}
+          />
+          <FormControl fullWidth margin="normal">
+            <InputLabel id="parent-team-select-label">Nadřazený tým</InputLabel>
+            <Select
+              labelId="parent-team-select-label"
+              value={editParentId || ""}
+              label="Nadřazený tým"
+              onChange={(e) =>
+                setEditParentId(e.target.value === "" ? null : e.target.value)
+              }
+            >
+              <SelectItem value="">(žádný)</SelectItem>
+              {possibleParents.map((parent) => (
+                <SelectItem key={parent.id} value={parent.id}>
+                  {parent.name}
+                </SelectItem>
+              ))}
+            </Select>
+          </FormControl>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancel}>Zrušit</Button>
+          <Button
+            onClick={handleSave}
+            variant="contained"
+            disabled={!editName.trim()}
+          >
+            Uložit
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

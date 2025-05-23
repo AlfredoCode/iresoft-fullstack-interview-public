@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Team, Employee } from "../types/types";
-import { fetchTeams, deleteTeam } from "../utils/teamController";
+import { fetchTeams, deleteTeam, updateTeam } from "../utils/teamController";
 import {
   Box,
   Typography,
@@ -38,10 +38,50 @@ export default function Teams() {
   const [search, setSearch] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // New state for multiple selection
   const [selectedTeamIds, setSelectedTeamIds] = useState<Set<string>>(
     new Set()
   );
+  const modifyTeam = async (
+    teamId: string,
+    newName: string,
+    newParentId: string | null
+  ) => {
+    try {
+      await updateTeam(teamId, {
+        name: newName,
+        parent_team_id: newParentId, // send null explicitly if needed
+      });
+
+      setTeams((prevTeams) =>
+        prevTeams.map((team) =>
+          team.id === teamId
+            ? {
+                ...team,
+                name: newName,
+                parent_team_id:
+                  newParentId === null ? null : Number(newParentId),
+              }
+            : team
+        )
+      );
+
+      if (selectedTeam?.id === teamId) {
+        setSelectedTeam((prev) =>
+          prev
+            ? {
+                ...prev,
+                name: newName,
+                parent_team_id:
+                  newParentId === null ? null : Number(newParentId),
+              }
+            : prev
+        );
+      }
+      await loadTeams();
+    } catch (error) {
+      console.error("Failed to update team", error);
+    }
+  };
 
   const loadTeams = async () => {
     const data = await fetchTeams();
@@ -233,9 +273,8 @@ export default function Teams() {
             onSelect={handleSelectTeam}
             selectedTeamIds={selectedTeamIds}
             toggleTeamSelection={toggleTeamSelection}
-            onModify={() => {
-              /*TODO*/
-            }}
+            onModify={modifyTeam}
+            teams={teams}
           />
         ))
       )}

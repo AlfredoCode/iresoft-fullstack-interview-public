@@ -49,3 +49,29 @@ export async function deleteTeam(teamId: string): Promise<void> {
     throw new Error("Failed to delete team");
   }
 }
+
+export async function updateTeam(
+  teamId: string,
+  data: { name?: string; parent_team_id?: string | null }
+) {
+  try {
+    const response = await fetch(`${BASE_URL}/teams/${teamId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${STATIC_TOKEN}`,
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to update team: ${errorText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("updateTeam error:", error);
+    throw error;
+  }
+}
