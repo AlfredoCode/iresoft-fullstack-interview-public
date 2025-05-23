@@ -3,6 +3,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from starlette import status
 
+from typing import List
+
 from src.dependencies import (
     team_service_factory,
     verify_token,
@@ -11,6 +13,7 @@ from src.dependencies import (
 from src.models.employee import EmployeeService
 from src.models.team import TeamService
 
+from src.routers.employees import EmployeeResponseSchema
 
 class TeamBaseSchema(BaseModel):
     name: str
@@ -18,6 +21,8 @@ class TeamBaseSchema(BaseModel):
 
 class TeamResponseSchema(TeamBaseSchema):
     id: str
+    employees: List[EmployeeResponseSchema]
+    parent_team_id: str | None = Field(default=None)
 
 
 class TeamCreateSchema(TeamBaseSchema):
