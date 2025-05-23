@@ -38,5 +38,10 @@ class TeamService:
     def update(self):
         pass
 
-    def delete(self):
-        pass
+    def delete(self, team_id: str):
+        team = self.session.query(self.model).filter(self.model.id == team_id).first()
+        if not team:
+            raise NoResultFound(f"Team with id {team_id} not found")
+        self.session.delete(team)
+        self.session.commit()
+        return team

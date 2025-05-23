@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Team, Employee } from "../types/types";
-import { fetchTeams } from "../utils/teamController";
+import { fetchTeams, deleteTeam } from "../utils/teamController";
 import {
   Box,
   Typography,
@@ -24,7 +24,7 @@ import {
   buildTeamTree,
   gatherEmployeesWithTeamName,
 } from "@/utils/treeHelpers";
-import { TeamAdd } from "@/components/teams/TeamAdd"; // Make sure path is correct
+import { TeamAdd } from "@/components/teams/TeamAdd";
 import AddIcon from "@mui/icons-material/Add";
 
 export default function Teams() {
@@ -38,9 +38,56 @@ export default function Teams() {
   const [search, setSearch] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+  // New state for multiple selection
+  const [selectedTeamIds, setSelectedTeamIds] = useState<Set<string>>(
+    new Set()
+  );
+
   const loadTeams = async () => {
     const data = await fetchTeams();
     setTeams(data);
+  };
+
+  const handleDeleteTeam = async (teamId: string) => {
+    await deleteTeam(teamId);
+    await loadTeams();
+    setSelectedTeamIds((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(teamId);
+      return newSet;
+    });
+  };
+
+  const toggleTeamSelection = (teamIds: string[]) => {
+    setSelectedTeamIds((prev) => {
+      const newSet = new Set(prev);
+      const allSelected = teamIds.every((id) => newSet.has(id));
+      if (allSelected) {
+        // Unselect all
+        teamIds.forEach((id) => newSet.delete(id));
+      } else {
+        // Select all
+        teamIds.forEach((id) => newSet.add(id));
+      }
+      return newSet;
+    });
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedTeamIds.size === 0) return;
+
+    if (
+      !confirm(
+        `Opravdu chcete smazat ${selectedTeamIds.size} týmů? Tuto akci nelze vrátit.`
+      )
+    )
+      return;
+
+    // Delete all selected teams in parallel for speed
+    await Promise.all(Array.from(selectedTeamIds).map((id) => deleteTeam(id)));
+
+    setSelectedTeamIds(new Set());
+    await loadTeams();
   };
 
   useEffect(() => {
@@ -94,27 +141,36 @@ export default function Teams() {
         margin: "auto",
       }}
     >
-      <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-        <Typography variant="h4" sx={{ mb: 2 }}>
-          Týmy
-        </Typography>
+      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
+        <Typography variant="h4">Týmy</Typography>
 
-        <Button
-          variant="outlined"
-          startIcon={<AddIcon />}
-          onClick={() => setAddTeamOpen(true)}
-          sx={{
-            mb: 2,
-            color: "#3461eb",
-            borderColor: "rgb(52, 97, 235)",
-            "&:hover": {
-              backgroundColor: "rgba(52, 97, 235, 0.14)",
-              borderColor: "#3461eb",
-            },
-          }}
-        >
-          Vytvořit
-        </Button>
+        <Box>
+          <Button
+            variant="outlined"
+            color="error"
+            disabled={selectedTeamIds.size === 0}
+            onClick={handleDeleteSelected}
+            sx={{ mr: 2 }}
+          >
+            Smazat vybrané ({selectedTeamIds.size})
+          </Button>
+
+          <Button
+            variant="outlined"
+            startIcon={<AddIcon />}
+            onClick={() => setAddTeamOpen(true)}
+            sx={{
+              color: "#3461eb",
+              borderColor: "rgb(52, 97, 235)",
+              "&:hover": {
+                backgroundColor: "rgba(52, 97, 235, 0.14)",
+                borderColor: "#3461eb",
+              },
+            }}
+          >
+            Vytvořit
+          </Button>
+        </Box>
       </Box>
 
       <Dialog
@@ -171,7 +227,16 @@ export default function Teams() {
         />
       ) : (
         tree.map((root) => (
-          <TeamNode key={root.id} team={root} onSelect={handleSelectTeam} />
+          <TeamNode
+            key={root.id}
+            team={root}
+            onSelect={handleSelectTeam}
+            selectedTeamIds={selectedTeamIds}
+            toggleTeamSelection={toggleTeamSelection}
+            onModify={() => {
+              /*TODO*/
+            }}
+          />
         ))
       )}
 

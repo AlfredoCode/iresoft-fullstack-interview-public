@@ -35,3 +35,17 @@ export async function createTeam(data: {
   const team: Team = await res.json();
   return team;
 }
+
+export async function deleteTeam(teamId: string): Promise<void> {
+  console.log("Removing", teamId);
+  const res = await fetch(`${BASE_URL}/teams/${teamId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${STATIC_TOKEN}`,
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to delete team");
+  }
+}

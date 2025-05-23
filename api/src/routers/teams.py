@@ -90,5 +90,9 @@ async def update_team(team_id):
 @router.delete(
     "/{team_id}", dependencies=[Depends(verify_token)], operation_id="delete_team"
 )
-async def delete_team(team_id):
-    pass
+async def delete_team(team_id: str, team_service: TeamService = Depends(team_service_factory)):
+    try:
+        team_service.delete(team_id)
+    except NoResultFound:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
+    return {"detail": "Team deleted successfully"}

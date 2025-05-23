@@ -8,7 +8,7 @@ export type Employee = {
 };
 
 export type Team = {
-  id: number;
+  id: string;
   name: string;
   employees: Employee[];
   children: Team[];
