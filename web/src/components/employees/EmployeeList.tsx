@@ -1,5 +1,12 @@
 import React from "react";
-import { Avatar, Box, Divider, Stack, Typography } from "@mui/material";
+import {
+  Avatar,
+  Box,
+  Divider,
+  Stack,
+  Typography,
+  Checkbox,
+} from "@mui/material";
 import { Employee } from "@/types/types";
 import { stringAvatar } from "@/utils/stringAvatar";
 
@@ -7,13 +14,30 @@ type Props = {
   employeesGroupedByTeam: Record<string, Employee[]>;
   isPastEmployee: (emp: Employee) => boolean;
   teamName: string;
+  selectedEmployeeIds?: Set<string>;
+  onSelectEmployees?: (selected: Set<string>) => void;
+  onEmployeeClick?: (emp: Employee) => void; // <-- new prop
 };
 
 export default function EmployeeList({
   employeesGroupedByTeam,
   isPastEmployee,
   teamName,
+  selectedEmployeeIds,
+  onSelectEmployees,
+  onEmployeeClick, // destructure
 }: Props) {
+  const toggleEmployeeSelection = (empId: string) => {
+    if (!onSelectEmployees || !selectedEmployeeIds) return;
+    const newSelected = new Set(selectedEmployeeIds);
+    if (newSelected.has(empId)) {
+      newSelected.delete(empId);
+    } else {
+      newSelected.add(empId);
+    }
+    onSelectEmployees(newSelected);
+  };
+
   return (
     <>
       {Object.entries(employeesGroupedByTeam).every(
@@ -53,6 +77,9 @@ export default function EmployeeList({
                   })
                   .map((emp) => {
                     const past = isPastEmployee(emp);
+                    const isSelected =
+                      selectedEmployeeIds?.has(emp.id) ?? false;
+
                     return (
                       <Stack
                         key={emp.id}
@@ -66,9 +93,20 @@ export default function EmployeeList({
                           opacity: past ? 0.6 : 1,
                           userSelect: "text",
                           transition: "background-color 0.3s",
-                          "&:hover": { bgcolor: "grey.200" },
+                          "&:hover": { bgcolor: "grey.200", cursor: "pointer" },
                         }}
+                        onClick={() => onEmployeeClick?.(emp)}
                       >
+                        {onSelectEmployees && (
+                          <Checkbox
+                            checked={isSelected}
+                            tabIndex={-1}
+                            disableRipple
+                            onChange={() => toggleEmployeeSelection(emp.id)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        )}
+
                         <Avatar
                           {...stringAvatar(`${emp.name} ${emp.surname}`)}
                         />

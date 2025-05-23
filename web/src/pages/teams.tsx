@@ -13,6 +13,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Avatar,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import TeamNode from "@/components/teams/TeamNode";
@@ -24,6 +25,7 @@ import {
 } from "@/utils/treeHelpers";
 import { TeamAdd } from "@/components/teams/TeamAdd";
 import AddIcon from "@mui/icons-material/Add";
+import { stringAvatar } from "@/utils/stringAvatar";
 
 export default function Teams() {
   const [addTeamOpen, setAddTeamOpen] = useState(false);
@@ -40,9 +42,30 @@ export default function Teams() {
     new Set()
   );
 
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(
+    null
+  );
+
+  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<Set<string>>(
+    new Set()
+  );
+
   // Delete confirmation modal states
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [teamsToDelete, setTeamsToDelete] = useState<Set<string>>(new Set());
+  const handleSelect = (
+    item:
+      | (Team & { children: Team[]; type: "team" })
+      | (Employee & { teamName: string; type: "employee" })
+  ) => {
+    if (item.type === "team") {
+      handleSelectTeam(item);
+    } else {
+      setSelectedEmployee(item);
+      setDrawerOpen(true);
+      console.log("Selected employee:", item.name, item.surname);
+    }
+  };
 
   const modifyTeam = async (
     teamId: string,
@@ -52,7 +75,7 @@ export default function Teams() {
     try {
       await updateTeam(teamId, {
         name: newName,
-        parent_team_id: newParentId, // send null explicitly if needed
+        parent_team_id: newParentId,
       });
 
       setTeams((prevTeams) =>
@@ -106,24 +129,20 @@ export default function Teams() {
       const newSet = new Set(prev);
       const allSelected = teamIds.every((id) => newSet.has(id));
       if (allSelected) {
-        // Unselect all
         teamIds.forEach((id) => newSet.delete(id));
       } else {
-        // Select all
         teamIds.forEach((id) => newSet.add(id));
       }
       return newSet;
     });
   };
 
-  // When user clicks delete selected button, open confirmation modal instead of immediate delete
   const handleDeleteSelected = () => {
     if (selectedTeamIds.size === 0) return;
     setTeamsToDelete(new Set(selectedTeamIds));
     setDeleteConfirmOpen(true);
   };
 
-  // Confirm deletion handler (runs after user confirms in modal)
   const confirmDelete = async () => {
     await Promise.all(Array.from(teamsToDelete).map((id) => deleteTeam(id)));
     setSelectedTeamIds(new Set());
@@ -132,7 +151,6 @@ export default function Teams() {
     await loadTeams();
   };
 
-  // Cancel deletion handler (closes modal)
   const cancelDelete = () => {
     setDeleteConfirmOpen(false);
     setTeamsToDelete(new Set());
@@ -151,6 +169,8 @@ export default function Teams() {
   const handleSelectTeam = (team: Team & { children: Team[] }) => {
     setSelectedTeam(team);
     setDrawerOpen(true);
+    // Clear employee selection when switching teams
+    setSelectedEmployeeIds(new Set());
   };
 
   const allEmployeesWithTeamName = tree.flatMap((root) =>
@@ -175,6 +195,19 @@ export default function Teams() {
       employeesGroupedByTeam[teamName].push(employee);
     });
   }
+
+  // Employee selection toggle handler
+  const toggleEmployeeSelection = (employeeId: string) => {
+    setSelectedEmployeeIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(employeeId)) {
+        newSet.delete(employeeId);
+      } else {
+        newSet.add(employeeId);
+      }
+      return newSet;
+    });
+  };
 
   return (
     <Box
@@ -242,7 +275,6 @@ export default function Teams() {
         </DialogActions>
       </Dialog>
 
-      {/* Delete confirmation modal */}
       <Dialog
         open={deleteConfirmOpen}
         onClose={cancelDelete}
@@ -260,7 +292,7 @@ export default function Teams() {
         </DialogContent>
         <DialogActions>
           <Button onClick={cancelDelete}>Zrušit</Button>
-          <Button onClick={confirmDelete} variant="contained" color="error">
+          <Button variant="contained" color="error" onClick={confirmDelete}>
             Smazat
           </Button>
         </DialogActions>
@@ -294,7 +326,7 @@ export default function Teams() {
           search={search}
           filteredTeams={filteredTeams}
           filteredEmployees={filteredEmployees}
-          onSelect={handleSelectTeam}
+          onSelect={handleSelect}
           isPastEmployee={isPastEmployee}
         />
       ) : (
@@ -314,7 +346,12 @@ export default function Teams() {
       <Drawer
         anchor="right"
         open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
+        onClose={() => {
+          setDrawerOpen(false);
+          setTimeout(() => {
+            setSelectedEmployee(null);
+          }, 200);
+        }}
         PaperProps={{
           sx: { width: 400, px: 2, py: 3 },
         }}
@@ -326,20 +363,76 @@ export default function Teams() {
           sx={{ mb: 3 }}
         >
           <Typography variant="h5" sx={{ fontWeight: "bold" }}>
-            Detail týmu
+            {selectedEmployee ? "Detail zaměstnance" : "Detail týmu"}
           </Typography>
-          <IconButton onClick={() => setDrawerOpen(false)}>
+          <IconButton
+            onClick={() => {
+              setDrawerOpen(false);
+              setTimeout(() => {
+                setSelectedEmployee(null);
+              }, 200);
+            }}
+          >
             <CloseIcon />
           </IconButton>
         </Stack>
 
-        {selectedTeam && (
+        {selectedEmployee ? (
+          <Box>
+            <Stack direction="row" spacing={2} alignItems="center" mb={2}>
+              <Avatar
+                {...stringAvatar(
+                  `${selectedEmployee.name} ${selectedEmployee.surname}`
+                )}
+                sx={{ width: 56, height: 56 }}
+              />
+              <Box>
+                <Typography variant="h6">
+                  {selectedEmployee.name} {selectedEmployee.surname}
+                </Typography>
+                <Typography variant="subtitle2" color="text.secondary">
+                  {selectedEmployee.position}
+                </Typography>
+                {isPastEmployee(selectedEmployee) && (
+                  <Typography variant="body2" color="error">
+                    Již není zaměstnán
+                  </Typography>
+                )}
+              </Box>
+            </Stack>
+
+            <Stack spacing={1}>
+              <Typography variant="body2">
+                <strong>Zaměstnán od:</strong>{" "}
+                {selectedEmployee.start_date
+                  ? new Date(selectedEmployee.start_date).toLocaleDateString(
+                      "cs-CZ"
+                    )
+                  : "Neuvedeno"}
+              </Typography>
+              <Typography variant="body2">
+                <strong>Konec zaměstnání:</strong>{" "}
+                {selectedEmployee.end_date
+                  ? new Date(selectedEmployee.end_date).toLocaleDateString(
+                      "cs-CZ"
+                    )
+                  : "-"}
+              </Typography>
+            </Stack>
+          </Box>
+        ) : selectedTeam ? (
           <EmployeeList
             employeesGroupedByTeam={employeesGroupedByTeam}
             isPastEmployee={isPastEmployee}
             teamName={selectedTeam.name}
+            selectedEmployeeIds={selectedEmployeeIds}
+            onSelectEmployees={setSelectedEmployeeIds}
+            onEmployeeClick={(emp) => {
+              setSelectedEmployee(emp);
+              setDrawerOpen(true);
+            }}
           />
-        )}
+        ) : null}
       </Drawer>
     </Box>
   );

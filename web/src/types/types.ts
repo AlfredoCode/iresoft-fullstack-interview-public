@@ -5,6 +5,7 @@ export type Employee = {
   surname: string;
   position: string;
   end_date?: string | null;
+  start_date?: string | null;
 };
 
 export type Team = {
