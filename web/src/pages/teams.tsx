@@ -94,7 +94,21 @@ export default function Teams() {
         fullWidth
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        sx={{ mb: 2 }}
+        sx={{
+          mb: 2,
+          "& .MuiOutlinedInput-root": {
+            "& fieldset": {
+              borderColor: "grey.400",
+            },
+            "&:hover fieldset": {
+              borderColor: "grey.500",
+            },
+            "&.Mui-focused fieldset": {
+              borderColor: "#3461eb", // your desired color on click
+              borderWidth: 1,
+            },
+          },
+        }}
       />
 
       {search ? (
