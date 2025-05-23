@@ -1,4 +1,5 @@
 import { Controller, useForm } from "react-hook-form";
+import { Employee, Team } from "@/types/types";
 import {
   Box,
   FormControl,
@@ -8,6 +9,7 @@ import {
   TextField,
   Typography,
   Button,
+  MenuItem,
 } from "@mui/material";
 import { useState } from "react";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -15,23 +17,23 @@ import * as yup from "yup";
 import { FormFieldError } from "../forms/FormFieldError";
 import { FormError } from "../forms/FormError";
 import { FormSuccess } from "../forms/FormSuccess";
+import { createEmployee } from "@/utils/employeeController";
 
 const schema = yup.object().shape({
   name: yup.string().required("Name is required"),
   surname: yup.string().required("Surname is required"),
   team: yup.string(),
   position: yup.string(),
-  startDate: yup.date(),
-  endDate: yup
+  start_date: yup.date(),
+  end_date: yup
     .date()
     .min(yup.ref("startDate"), "End date can't be before start date"),
 });
-
-export const EmployeeAdd = (
-  {
-    /* teams */
-  }
-) => {
+interface EmployeeAddProps {
+  teams: Team[];
+  onSuccess?: () => void;
+}
+export const EmployeeAdd = ({ teams, onSuccess }: EmployeeAddProps) => {
   const [formError, setFormError] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -42,15 +44,34 @@ export const EmployeeAdd = (
     formState: { errors },
   } = useForm({ resolver: yupResolver(schema) });
 
-  const onSubmit = handleSubmit((formData) => {
-    console.log(formData);
+  const onSubmit = handleSubmit(async (formData) => {
+    setFormError(false);
+    setSuccess(false);
+
+    const employeePayload: Employee = {
+      id: null,
+      name: formData.name,
+      surname: formData.surname,
+      position: formData.position || "",
+      team_id: formData.team || null,
+      start_date: formData.start_date
+        ? formData.start_date.toISOString()
+        : null,
+      end_date: formData.end_date ? formData.end_date.toISOString() : null,
+    };
+
+    try {
+      await createEmployee(employeePayload);
+      setSuccess(true);
+      reset();
+      if (onSuccess) onSuccess();
+    } catch (err) {
+      setFormError(true);
+    }
   });
 
   return (
     <Box>
-      <Typography variant="h4" mb={3}>
-        Add employee
-      </Typography>
       <form onSubmit={onSubmit}>
         <Stack direction="row" gap={3}>
           <Box sx={{ flex: { xs: "0 0 100%", md: "0 1 50%" } }}>
@@ -59,7 +80,7 @@ export const EmployeeAdd = (
               defaultValue=""
               control={control}
               render={({ field }) => (
-                <TextField fullWidth {...field} label="Name" />
+                <TextField fullWidth {...field} label="Jméno" />
               )}
             />
 
@@ -72,7 +93,7 @@ export const EmployeeAdd = (
                 defaultValue=""
                 control={control}
                 render={({ field }) => (
-                  <TextField fullWidth {...field} label="Last Name" />
+                  <TextField fullWidth {...field} label="Příjmení" />
                 )}
               />
             </FormControl>
@@ -81,18 +102,18 @@ export const EmployeeAdd = (
           </Box>
         </Stack>
         <FormControl fullWidth sx={{ mt: 3 }}>
-          <InputLabel>Team</InputLabel>
+          <InputLabel>Tým</InputLabel>
           <Controller
             name="team"
             defaultValue=""
             control={control}
             render={({ field }) => (
               <Select {...field} label="Team">
-                {/*                 {teams.map((team) => (
+                {teams.map((team) => (
                   <MenuItem key={team.id} value={team.id}>
                     {team.name}
                   </MenuItem>
-                ))} */}
+                ))}
               </Select>
             )}
           />
@@ -107,31 +128,33 @@ export const EmployeeAdd = (
           flexWrap={{ xs: "wrap", md: "nowrap" }}
         >
           <Box sx={{ flex: { xs: "0 0 100%", md: "0 1 50%" } }}>
-            <InputLabel>Start Date </InputLabel>
+            <InputLabel>Nástup</InputLabel>
             <Controller
               defaultValue={undefined}
-              name="startDate"
+              name="start_date"
               control={control}
               render={({ field }) => (
                 <TextField fullWidth type="date" {...field} />
               )}
             />
 
-            {errors.startDate && (
-              <FormFieldError text={errors.startDate.message} />
+            {errors.start_date && (
+              <FormFieldError text={errors.start_date.message} />
             )}
           </Box>
           <Box sx={{ flex: { xs: "0 0 100%", md: "0 1 50%" } }}>
-            <InputLabel>End Date </InputLabel>
+            <InputLabel>Konec</InputLabel>
             <Controller
               defaultValue={undefined}
-              name="endDate"
+              name="end_date"
               control={control}
               render={({ field }) => (
                 <TextField fullWidth type="date" {...field} />
               )}
             />
-            {errors.endDate && <FormFieldError text={errors.endDate.message} />}
+            {errors.end_date && (
+              <FormFieldError text={errors.end_date.message} />
+            )}
           </Box>
         </Stack>
         <Box mt={3}>
@@ -141,14 +164,14 @@ export const EmployeeAdd = (
             control={control}
             rules={{ required: true }}
             render={({ field }) => (
-              <TextField fullWidth {...field} label="Position" />
+              <TextField fullWidth {...field} label="Pozice" />
             )}
           />
           {errors.position && <FormFieldError text={errors.position.message} />}
         </Box>
 
         <Button type="submit" variant="contained" sx={{ my: 3 }}>
-          Add employee
+          Vytvořit
         </Button>
         {formError && <FormError text="Please fill out the form correctly" />}
         {success && <FormSuccess text="Employee Added" />}

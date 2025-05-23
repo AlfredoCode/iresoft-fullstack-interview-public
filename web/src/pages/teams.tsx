@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Team, Employee } from "../types/types";
+import { Tabs, Tab } from "@mui/material";
+import { EmployeeAdd } from "@/components/employees/EmployeeAdd";
 import { fetchTeams, deleteTeam, updateTeam } from "../utils/teamController";
 import {
   Box,
@@ -30,7 +32,7 @@ import { stringAvatar } from "@/utils/stringAvatar";
 
 export default function Teams() {
   const [addTeamOpen, setAddTeamOpen] = useState(false);
-
+  const [addTabIndex, setAddTabIndex] = useState(0);
   const [teams, setTeams] = useState<Team[]>([]);
   const [tree, setTree] = useState<(Team & { children: Team[] })[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<
@@ -261,16 +263,39 @@ export default function Teams() {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Přidat tým</DialogTitle>
+        <DialogTitle>
+          <Tabs
+            value={addTabIndex}
+            onChange={(_, newIndex) => setAddTabIndex(newIndex)}
+            aria-label="Add tabs"
+            variant="fullWidth"
+          >
+            <Tab label="Přidat tým" />
+            <Tab label="Přidat zaměstnance" />
+          </Tabs>
+        </DialogTitle>
+
         <DialogContent dividers>
-          <TeamAdd
-            teams={teams}
-            onAddSuccess={() => {
-              setAddTeamOpen(false);
-              loadTeams();
-            }}
-          />
+          {addTabIndex === 0 && (
+            <TeamAdd
+              teams={teams}
+              onAddSuccess={() => {
+                setAddTeamOpen(false);
+                loadTeams();
+              }}
+            />
+          )}
+          {addTabIndex === 1 && (
+            <EmployeeAdd
+              onSuccess={() => {
+                setAddTeamOpen(false);
+                loadTeams();
+              }}
+              teams={teams}
+            />
+          )}
         </DialogContent>
+
         <DialogActions>
           <Button onClick={() => setAddTeamOpen(false)}>Zavřít</Button>
         </DialogActions>

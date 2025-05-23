@@ -1,7 +1,5 @@
 import type { Team } from "../types/types";
-
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-const STATIC_TOKEN = process.env.NEXT_PUBLIC_API_TOKEN || "";
+import { BASE_URL, STATIC_TOKEN } from "./api";
 
 export async function fetchTeams(): Promise<Team[]> {
   const res = await fetch(`${BASE_URL}/teams`, {
