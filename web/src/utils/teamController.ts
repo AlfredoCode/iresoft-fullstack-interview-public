@@ -35,7 +35,6 @@ export async function createTeam(data: {
 }
 
 export async function deleteTeam(teamId: string): Promise<void> {
-  console.log("Removing", teamId);
   const res = await fetch(`${BASE_URL}/teams/${teamId}`, {
     method: "DELETE",
     headers: {

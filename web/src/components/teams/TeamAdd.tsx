@@ -78,7 +78,7 @@ export const TeamAdd = ({ teams, onAddSuccess }: TeamAddProps) => {
           <InputLabel>Nadřazený tým</InputLabel>
           <Controller
             name="parentTeam"
-            defaultValue=""
+            defaultValue="Žádný"
             control={control}
             render={({ field }) => (
               <Select
@@ -87,12 +87,13 @@ export const TeamAdd = ({ teams, onAddSuccess }: TeamAddProps) => {
                 MenuProps={{
                   PaperProps: {
                     style: {
-                      maxHeight: 200, // max height in px
-                      overflowY: "auto", // enable vertical scrolling
+                      maxHeight: 200,
+                      overflowY: "auto",
                     },
                   },
                 }}
               >
+                <MenuItem value="Žádný">Žádný</MenuItem>{" "}
                 {teams.map((team) => (
                   <MenuItem key={team.id} value={team.id}>
                     {team.name}

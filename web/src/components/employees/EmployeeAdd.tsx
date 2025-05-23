@@ -27,7 +27,7 @@ const schema = yup.object().shape({
   start_date: yup.date(),
   end_date: yup
     .date()
-    .min(yup.ref("startDate"), "End date can't be before start date"),
+    .min(yup.ref("start_date"), "End date can't be before start date"),
 });
 interface EmployeeAddProps {
   teams: Team[];
@@ -105,10 +105,10 @@ export const EmployeeAdd = ({ teams, onSuccess }: EmployeeAddProps) => {
           <InputLabel>Tým</InputLabel>
           <Controller
             name="team"
-            defaultValue=""
+            defaultValue={teams.length > 0 ? teams[0].id : ""}
             control={control}
             render={({ field }) => (
-              <Select {...field} label="Team">
+              <Select {...field} label="Tým">
                 {teams.map((team) => (
                   <MenuItem key={team.id} value={team.id}>
                     {team.name}
