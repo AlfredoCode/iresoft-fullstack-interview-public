@@ -1,4 +1,6 @@
 from datetime import datetime
+from typing import Optional
+
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -16,6 +18,8 @@ class EmployeeBaseSchema(BaseModel):
 class EmployeeResponseSchema(EmployeeBaseSchema):
     id: str
     created_at: datetime
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
 
     class Config:
         from_attributes = True
