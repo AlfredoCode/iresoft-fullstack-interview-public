@@ -48,12 +48,11 @@ export const Layout = ({ children }: LayoutProps) => {
         component="main"
         sx={{
           flexGrow: 1,
-          p: isMd ? 2 : 0,
           maxWidth: "100%",
           width: { md: `calc(100% - ${drawerWidth}px)` },
         }}
       >
-        {!isMd && <Toolbar />}
+        {/* {!isMd && <Toolbar />} */}
 
         {children}
       </Box>
