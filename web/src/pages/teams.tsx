@@ -16,6 +16,7 @@ import {
   Avatar,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import TeamNode from "@/components/teams/TeamNode";
 import EmployeeList from "@/components/employees/EmployeeList";
 import SearchResults from "@/components/search/SearchResult";
@@ -350,6 +351,7 @@ export default function Teams() {
           setDrawerOpen(false);
           setTimeout(() => {
             setSelectedEmployee(null);
+            setSelectedTeam(null);
           }, 200);
         }}
         PaperProps={{
@@ -362,6 +364,16 @@ export default function Teams() {
           alignItems="center"
           sx={{ mb: 3 }}
         >
+          {selectedEmployee && selectedTeam && (
+            <Box>
+              <IconButton
+                onClick={() => setSelectedEmployee(null)}
+                aria-label="Zpět"
+              >
+                <ArrowBackIcon />
+              </IconButton>
+            </Box>
+          )}
           <Typography variant="h5" sx={{ fontWeight: "bold" }}>
             {selectedEmployee ? "Detail zaměstnance" : "Detail týmu"}
           </Typography>
@@ -370,6 +382,7 @@ export default function Teams() {
               setDrawerOpen(false);
               setTimeout(() => {
                 setSelectedEmployee(null);
+                setSelectedTeam(null);
               }, 200);
             }}
           >
@@ -424,13 +437,14 @@ export default function Teams() {
           <EmployeeList
             employeesGroupedByTeam={employeesGroupedByTeam}
             isPastEmployee={isPastEmployee}
-            teamName={selectedTeam.name}
+            teamName={selectedTeam?.name ?? ""}
             selectedEmployeeIds={selectedEmployeeIds}
             onSelectEmployees={setSelectedEmployeeIds}
             onEmployeeClick={(emp) => {
               setSelectedEmployee(emp);
               setDrawerOpen(true);
             }}
+            onBackToTeam={() => setSelectedEmployee(null)}
           />
         ) : null}
       </Drawer>

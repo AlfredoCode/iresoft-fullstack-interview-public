@@ -16,7 +16,8 @@ type Props = {
   teamName: string;
   selectedEmployeeIds?: Set<string>;
   onSelectEmployees?: (selected: Set<string>) => void;
-  onEmployeeClick?: (emp: Employee) => void; // <-- new prop
+  onEmployeeClick?: (emp: Employee) => void;
+  onBackToTeam?: () => void;
 };
 
 export default function EmployeeList({
@@ -25,7 +26,7 @@ export default function EmployeeList({
   teamName,
   selectedEmployeeIds,
   onSelectEmployees,
-  onEmployeeClick, // destructure
+  onEmployeeClick,
 }: Props) {
   const toggleEmployeeSelection = (empId: string) => {
     if (!onSelectEmployees || !selectedEmployeeIds) return;
