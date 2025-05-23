@@ -9,7 +9,7 @@ declare module "@mui/material/styles/createPalette" {
 const theme = createTheme({
   palette: {
     primary: {
-      main: "#02D076",
+      main: "rgb(52, 97, 235)",
       contrastText: "#ffffff",
     },
     secondary: {

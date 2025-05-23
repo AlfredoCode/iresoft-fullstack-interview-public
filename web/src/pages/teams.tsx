@@ -9,8 +9,6 @@ import {
   IconButton,
   Button,
   Stack,
-} from "@mui/material";
-import {
   Dialog,
   DialogTitle,
   DialogContent,
@@ -41,6 +39,11 @@ export default function Teams() {
   const [selectedTeamIds, setSelectedTeamIds] = useState<Set<string>>(
     new Set()
   );
+
+  // Delete confirmation modal states
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [teamsToDelete, setTeamsToDelete] = useState<Set<string>>(new Set());
+
   const modifyTeam = async (
     teamId: string,
     newName: string,
@@ -113,21 +116,26 @@ export default function Teams() {
     });
   };
 
-  const handleDeleteSelected = async () => {
+  // When user clicks delete selected button, open confirmation modal instead of immediate delete
+  const handleDeleteSelected = () => {
     if (selectedTeamIds.size === 0) return;
+    setTeamsToDelete(new Set(selectedTeamIds));
+    setDeleteConfirmOpen(true);
+  };
 
-    if (
-      !confirm(
-        `Opravdu chcete smazat ${selectedTeamIds.size} týmů? Tuto akci nelze vrátit.`
-      )
-    )
-      return;
-
-    // Delete all selected teams in parallel for speed
-    await Promise.all(Array.from(selectedTeamIds).map((id) => deleteTeam(id)));
-
+  // Confirm deletion handler (runs after user confirms in modal)
+  const confirmDelete = async () => {
+    await Promise.all(Array.from(teamsToDelete).map((id) => deleteTeam(id)));
     setSelectedTeamIds(new Set());
+    setTeamsToDelete(new Set());
+    setDeleteConfirmOpen(false);
     await loadTeams();
+  };
+
+  // Cancel deletion handler (closes modal)
+  const cancelDelete = () => {
+    setDeleteConfirmOpen(false);
+    setTeamsToDelete(new Set());
   };
 
   useEffect(() => {
@@ -201,7 +209,7 @@ export default function Teams() {
             onClick={() => setAddTeamOpen(true)}
             sx={{
               color: "#3461eb",
-              borderColor: "rgb(52, 97, 235)",
+              borderColor: "primary",
               "&:hover": {
                 backgroundColor: "rgba(52, 97, 235, 0.14)",
                 borderColor: "#3461eb",
@@ -231,6 +239,30 @@ export default function Teams() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setAddTeamOpen(false)}>Zavřít</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete confirmation modal */}
+      <Dialog
+        open={deleteConfirmOpen}
+        onClose={cancelDelete}
+        aria-labelledby="delete-confirm-dialog-title"
+        aria-describedby="delete-confirm-dialog-description"
+      >
+        <DialogTitle id="delete-confirm-dialog-title">
+          Potvrzení smazání
+        </DialogTitle>
+        <DialogContent>
+          <Typography id="delete-confirm-dialog-description">
+            Opravdu chcete smazat {teamsToDelete.size} tým
+            {teamsToDelete.size > 1 ? "ů" : "?"} ? Tuto akci nelze vrátit.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={cancelDelete}>Zrušit</Button>
+          <Button onClick={confirmDelete} variant="contained" color="error">
+            Smazat
+          </Button>
         </DialogActions>
       </Dialog>
 

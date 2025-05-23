@@ -35,7 +35,7 @@ type Props = {
     newName: string,
     newParentId: string | null
   ) => void;
-  teams: Team[]; // Add the full teams list here for the parent select
+  teams: Team[];
   selectedTeamIds?: Set<string>;
   toggleTeamSelection?: (teamIds: string[]) => void;
   level?: number;
