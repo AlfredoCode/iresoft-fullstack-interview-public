@@ -78,8 +78,9 @@ export default function EmployeeList({
                   })
                   .map((emp) => {
                     const past = isPastEmployee(emp);
-                    const isSelected =
-                      selectedEmployeeIds?.has(emp.id) ?? false;
+                    const isSelected = emp.id
+                      ? selectedEmployeeIds?.has(emp.id) ?? false
+                      : false;
 
                     return (
                       <Stack
@@ -103,7 +104,7 @@ export default function EmployeeList({
                             checked={isSelected}
                             tabIndex={-1}
                             disableRipple
-                            onChange={() => toggleEmployeeSelection(emp.id)}
+                            onChange={() => toggleEmployeeSelection(emp.id!)}
                             onClick={(e) => e.stopPropagation()}
                           />
                         )}

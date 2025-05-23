@@ -1,6 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { Team, Employee } from "../types/types";
-import { Tabs, Tab } from "@mui/material";
+import {
+  Tabs,
+  Tab,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+} from "@mui/material";
 import { EmployeeAdd } from "@/components/employees/EmployeeAdd";
 import { fetchTeams, deleteTeam, updateTeam } from "../utils/teamController";
 import {
@@ -29,6 +36,10 @@ import {
 import { TeamAdd } from "@/components/teams/TeamAdd";
 import AddIcon from "@mui/icons-material/Add";
 import { stringAvatar } from "@/utils/stringAvatar";
+import {
+  handleDeleteEmployee,
+  handleUpdateEmployee,
+} from "@/utils/employeeController";
 
 export default function Teams() {
   const [addTeamOpen, setAddTeamOpen] = useState(false);
@@ -40,6 +51,8 @@ export default function Teams() {
   >(null);
   const [search, setSearch] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editEmployeeOpen, setEditEmployeeOpen] = useState(false);
+  const [employeeForm, setEmployeeForm] = useState<Employee | null>(null);
 
   const [selectedTeamIds, setSelectedTeamIds] = useState<Set<string>>(
     new Set()
@@ -53,7 +66,9 @@ export default function Teams() {
     new Set()
   );
 
-  // Delete confirmation modal states
+  const [deleteEmployeeConfirmOpen, setDeleteEmployeeConfirmOpen] =
+    useState(false);
+
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [teamsToDelete, setTeamsToDelete] = useState<Set<string>>(new Set());
   const handleSelect = (
@@ -145,6 +160,14 @@ export default function Teams() {
     setTeamsToDelete(new Set(selectedTeamIds));
     setDeleteConfirmOpen(true);
   };
+  const handleDeleteSelectedEmployees = async () => {
+    const idsToDelete = Array.from(selectedEmployeeIds);
+    await Promise.all(idsToDelete.map((id) => handleDeleteEmployee(id)));
+    setSelectedEmployeeIds(new Set());
+    await loadTeams();
+    setDrawerOpen(false);
+    setSelectedTeam(null);
+  };
 
   const confirmDelete = async () => {
     await Promise.all(Array.from(teamsToDelete).map((id) => deleteTeam(id)));
@@ -168,11 +191,40 @@ export default function Teams() {
   }, [teams]);
 
   const isPastEmployee = (emp: Employee) => emp.end_date !== null;
+  const submitEmployeeUpdate = async () => {
+    if (!employeeForm || !employeeForm.id) return;
+
+    const { id, ...payload } = employeeForm;
+
+    if (!payload.team_id && selectedEmployee?.team_id) {
+      payload.team_id = selectedEmployee.team_id;
+    }
+
+    if (payload.start_date && payload.start_date.length === 10) {
+      payload.start_date = new Date(payload.start_date).toISOString();
+    }
+    if (payload.end_date && payload.end_date.length === 10) {
+      payload.end_date = new Date(payload.end_date).toISOString();
+    }
+
+    try {
+      await handleUpdateEmployee(id, payload);
+      setEditEmployeeOpen(false);
+      setSelectedEmployee(employeeForm);
+      await loadTeams();
+    } catch (error) {
+      console.error("Update failed:", error);
+    }
+  };
+
+  const openEditEmployeeModal = (employee: Employee) => {
+    setEmployeeForm(employee);
+    setEditEmployeeOpen(true);
+  };
 
   const handleSelectTeam = (team: Team & { children: Team[] }) => {
     setSelectedTeam(team);
     setDrawerOpen(true);
-    // Clear employee selection when switching teams
     setSelectedEmployeeIds(new Set());
   };
 
@@ -188,6 +240,10 @@ export default function Teams() {
     ({ name, surname }) =>
       `${name} ${surname}`.toLowerCase().includes(search.toLowerCase())
   );
+  const handleEmployeeFormChange = (field: keyof Employee, value: any) => {
+    if (!employeeForm) return;
+    setEmployeeForm({ ...employeeForm, [field]: value });
+  };
 
   const employeesGroupedByTeam: Record<string, Employee[]> = {};
   if (selectedTeam) {
@@ -368,6 +424,130 @@ export default function Teams() {
           />
         ))
       )}
+      <Dialog
+        open={editEmployeeOpen}
+        onClose={() => setEditEmployeeOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Upravit zaměstnance</DialogTitle>
+        <DialogContent dividers>
+          {employeeForm && (
+            <Stack spacing={2}>
+              <TextField
+                label="Jméno"
+                value={employeeForm.name}
+                onChange={(e) =>
+                  handleEmployeeFormChange("name", e.target.value)
+                }
+                fullWidth
+              />
+              <TextField
+                label="Příjmení"
+                value={employeeForm.surname}
+                onChange={(e) =>
+                  handleEmployeeFormChange("surname", e.target.value)
+                }
+                fullWidth
+              />
+              <TextField
+                label="Pozice"
+                value={employeeForm.position}
+                onChange={(e) =>
+                  handleEmployeeFormChange("position", e.target.value)
+                }
+                fullWidth
+              />
+              <TextField
+                label="Datum nástupu"
+                type="date"
+                value={
+                  employeeForm.start_date
+                    ? employeeForm.start_date.split("T")[0]
+                    : ""
+                }
+                onChange={(e) =>
+                  handleEmployeeFormChange("start_date", e.target.value)
+                }
+                fullWidth
+                InputLabelProps={{ shrink: true }}
+              />
+              <TextField
+                label="Datum ukončení"
+                type="date"
+                value={
+                  employeeForm.end_date
+                    ? employeeForm.end_date.split("T")[0]
+                    : ""
+                }
+                onChange={(e) =>
+                  handleEmployeeFormChange("end_date", e.target.value)
+                }
+                fullWidth
+                InputLabelProps={{ shrink: true }}
+              />
+              <FormControl fullWidth>
+                <InputLabel id="team-select-label">Tým</InputLabel>
+                <Select
+                  labelId="team-select-label"
+                  value={employeeForm.team_id || ""}
+                  label="Tým"
+                  onChange={(e) =>
+                    handleEmployeeFormChange("team_id", e.target.value)
+                  }
+                >
+                  {teams.map((team) => (
+                    <MenuItem key={team.id} value={team.id}>
+                      {team.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditEmployeeOpen(false)}>Zrušit</Button>
+          <Button variant="contained" onClick={submitEmployeeUpdate}>
+            Uložit
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog
+        open={deleteEmployeeConfirmOpen}
+        onClose={() => setDeleteEmployeeConfirmOpen(false)}
+      >
+        <DialogTitle>Potvrzení smazání zaměstnance</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Opravdu chcete smazat zaměstnance{" "}
+            <strong>
+              {selectedEmployee?.name} {selectedEmployee?.surname}
+            </strong>
+            ? Tuto akci nelze vrátit.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteEmployeeConfirmOpen(false)}>
+            Zrušit
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={async () => {
+              if (selectedEmployee?.id) {
+                await handleDeleteEmployee(selectedEmployee.id);
+                setDeleteEmployeeConfirmOpen(false);
+                setDrawerOpen(false);
+                setSelectedEmployee(null);
+                await loadTeams();
+              }
+            }}
+          >
+            Smazat
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Drawer
         anchor="right"
@@ -399,6 +579,7 @@ export default function Teams() {
               </IconButton>
             </Box>
           )}
+
           <Typography variant="h5" sx={{ fontWeight: "bold" }}>
             {selectedEmployee ? "Detail zaměstnance" : "Detail týmu"}
           </Typography>
@@ -416,7 +597,7 @@ export default function Teams() {
         </Stack>
 
         {selectedEmployee ? (
-          <Box>
+          <Box sx={{ height: "100%" }}>
             <Stack direction="row" spacing={2} alignItems="center" mb={2}>
               <Avatar
                 {...stringAvatar(
@@ -456,21 +637,64 @@ export default function Teams() {
                     )
                   : "-"}
               </Typography>
+              {selectedEmployee && (
+                <Stack
+                  direction="row"
+                  spacing={2}
+                  sx={{ position: "fixed", bottom: 20, right: 10 }}
+                >
+                  <Button
+                    variant="outlined"
+                    onClick={() => openEditEmployeeModal(selectedEmployee!)}
+                  >
+                    Upravit
+                  </Button>
+
+                  <Button
+                    variant="contained"
+                    color="error"
+                    onClick={() => setDeleteEmployeeConfirmOpen(true)}
+                  >
+                    Smazat
+                  </Button>
+                </Stack>
+              )}
             </Stack>
           </Box>
         ) : selectedTeam ? (
-          <EmployeeList
-            employeesGroupedByTeam={employeesGroupedByTeam}
-            isPastEmployee={isPastEmployee}
-            teamName={selectedTeam?.name ?? ""}
-            selectedEmployeeIds={selectedEmployeeIds}
-            onSelectEmployees={setSelectedEmployeeIds}
-            onEmployeeClick={(emp) => {
-              setSelectedEmployee(emp);
-              setDrawerOpen(true);
-            }}
-            onBackToTeam={() => setSelectedEmployee(null)}
-          />
+          <>
+            <EmployeeList
+              employeesGroupedByTeam={employeesGroupedByTeam}
+              isPastEmployee={isPastEmployee}
+              teamName={selectedTeam?.name ?? ""}
+              selectedEmployeeIds={selectedEmployeeIds}
+              onSelectEmployees={setSelectedEmployeeIds}
+              onEmployeeClick={(emp) => {
+                setSelectedEmployee(emp);
+                setDrawerOpen(true);
+              }}
+              onBackToTeam={() => setSelectedEmployee(null)}
+            />
+            {selectedTeam && selectedEmployeeIds.size > 0 && (
+              <Box
+                sx={{
+                  mt: 2,
+                  textAlign: "right",
+                  position: "fixed",
+                  bottom: 10,
+                  right: 10,
+                }}
+              >
+                <Button
+                  variant="contained"
+                  color="error"
+                  onClick={handleDeleteSelectedEmployees}
+                >
+                  Smazat vybrané zaměstnance ({selectedEmployeeIds.size})
+                </Button>
+              </Box>
+            )}
+          </>
         ) : null}
       </Drawer>
     </Box>
