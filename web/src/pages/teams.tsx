@@ -10,6 +10,12 @@ import {
   Button,
   Stack,
 } from "@mui/material";
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+} from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import TeamNode from "@/components/teams/TeamNode";
 import EmployeeList from "@/components/employees/EmployeeList";
@@ -18,8 +24,12 @@ import {
   buildTeamTree,
   gatherEmployeesWithTeamName,
 } from "@/utils/treeHelpers";
+import { TeamAdd } from "@/components/teams/TeamAdd"; // Make sure path is correct
+import AddIcon from "@mui/icons-material/Add";
 
 export default function Teams() {
+  const [addTeamOpen, setAddTeamOpen] = useState(false);
+
   const [teams, setTeams] = useState<Team[]>([]);
   const [tree, setTree] = useState<(Team & { children: Team[] })[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<
@@ -28,11 +38,12 @@ export default function Teams() {
   const [search, setSearch] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+  const loadTeams = async () => {
+    const data = await fetchTeams();
+    setTeams(data);
+  };
+
   useEffect(() => {
-    async function loadTeams() {
-      const data = await fetchTeams();
-      setTeams(data);
-    }
     loadTeams();
   }, []);
 
@@ -60,7 +71,6 @@ export default function Teams() {
       `${name} ${surname}`.toLowerCase().includes(search.toLowerCase())
   );
 
-  // Group employees by team name for drawer
   const employeesGroupedByTeam: Record<string, Employee[]> = {};
   if (selectedTeam) {
     const allEmps = gatherEmployeesWithTeamName(selectedTeam);
@@ -84,9 +94,49 @@ export default function Teams() {
         margin: "auto",
       }}
     >
-      <Typography variant="h4" sx={{ mb: 2 }}>
-        Týmy
-      </Typography>
+      <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+        <Typography variant="h4" sx={{ mb: 2 }}>
+          Týmy
+        </Typography>
+
+        <Button
+          variant="outlined"
+          startIcon={<AddIcon />}
+          onClick={() => setAddTeamOpen(true)}
+          sx={{
+            mb: 2,
+            color: "#3461eb",
+            borderColor: "rgb(52, 97, 235)",
+            "&:hover": {
+              backgroundColor: "rgba(52, 97, 235, 0.14)",
+              borderColor: "#3461eb",
+            },
+          }}
+        >
+          Vytvořit
+        </Button>
+      </Box>
+
+      <Dialog
+        open={addTeamOpen}
+        onClose={() => setAddTeamOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Přidat tým</DialogTitle>
+        <DialogContent dividers>
+          <TeamAdd
+            teams={teams}
+            onAddSuccess={() => {
+              setAddTeamOpen(false);
+              loadTeams();
+            }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAddTeamOpen(false)}>Zavřít</Button>
+        </DialogActions>
+      </Dialog>
 
       <TextField
         placeholder="Vyhledat tým nebo zaměstnance"
@@ -104,7 +154,7 @@ export default function Teams() {
               borderColor: "grey.500",
             },
             "&.Mui-focused fieldset": {
-              borderColor: "#3461eb", // your desired color on click
+              borderColor: "#3461eb",
               borderWidth: 1,
             },
           },
@@ -148,13 +198,11 @@ export default function Teams() {
         </Stack>
 
         {selectedTeam && (
-          <>
-            <EmployeeList
-              employeesGroupedByTeam={employeesGroupedByTeam}
-              isPastEmployee={isPastEmployee}
-              teamName={selectedTeam.name}
-            />
-          </>
+          <EmployeeList
+            employeesGroupedByTeam={employeesGroupedByTeam}
+            isPastEmployee={isPastEmployee}
+            teamName={selectedTeam.name}
+          />
         )}
       </Drawer>
     </Box>

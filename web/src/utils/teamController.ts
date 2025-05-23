@@ -14,3 +14,24 @@ export async function fetchTeams(): Promise<Team[]> {
 
   return teams;
 }
+
+export async function createTeam(data: {
+  name: string;
+  parent_team_id?: string | null;
+}): Promise<Team> {
+  const res = await fetch(`${BASE_URL}/teams`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${STATIC_TOKEN}`,
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to create team");
+  }
+
+  const team: Team = await res.json();
+  return team;
+}
